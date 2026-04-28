@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from twilio.rest import Client
 import smtplib
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-# Enable CORS so your React frontend (port 5173) can talk to Flask (port 5000)
+# Enable CORS so your React frontend can talk to Flask
 CORS(app)
 
 # --- Twilio Credentials ---
@@ -23,12 +23,18 @@ COMPANY_WHATSAPP_TO = 'whatsapp:+919486802976'
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 # --- Email Credentials ---
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')      # e.g., your company gmail
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') # MUST be a Google App Password
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')      
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') 
 
+# --- Updated Root Route (Health Check) ---
 @app.route('/')
 def home():
-    return render_template('index.html')
+    # Returns a simple JSON response for Render's health checks instead of looking for HTML
+    return jsonify({
+        "status": "online", 
+        "service": "Eemon X Backend API",
+        "message": "System operational."
+    }), 200
 
 @app.route('/send-whatsapp', methods=['POST'])
 def process_form():
@@ -70,7 +76,6 @@ def process_form():
     # ---------------------------------------------------------
     email_subject = f"Thank you for contacting Eemon X, {name}!"
     
-    # Professional email layout echoing their details
     email_body = f"""Hi {name},
 
 Thank you for reaching out to Eemon X. We have received your inquiry regarding {service}.
@@ -94,16 +99,14 @@ Official Comm: eemonx2025@gmail.com
 """
 
     try:
-        # Construct the email
         email_msg = MIMEMultipart()
         email_msg['From'] = SENDER_EMAIL
         email_msg['To'] = user_email
         email_msg['Subject'] = email_subject
         email_msg.attach(MIMEText(email_body, 'plain'))
 
-        # Connect to Gmail SMTP server
         server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls() # Secure the connection
+        server.starttls() 
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(email_msg)
         server.quit()
@@ -114,7 +117,6 @@ Official Comm: eemonx2025@gmail.com
         print(f"Email Error: {e}")
         return jsonify({"status": "error", "message": "WhatsApp sent, but failed to send email receipt."}), 500
 
-    # If both succeed
     return jsonify({"status": "success", "message": "Message sent and email receipt delivered!"}), 200
 
 if __name__ == '__main__':
